@@ -86,7 +86,7 @@ class MCTS_Task(SearchTask):
         self.set_limit_type()
     
         node, finish, root = MCTS(self)
-        # vm
+        
         if self.reward_model_type == 'vm':#value_model
             if self.sample_value != 'full':
                 if self.evaluate == 'mathvista':  # SciBench style
@@ -191,8 +191,6 @@ class MCTS_Task(SearchTask):
         #     return '<end>'
         print(f'reflection 결과:{response}')
 
-
-       
         
         if 'unsolved' in response or step_n <= 1:
             print('revised된 reflection: <continue>\n')
@@ -219,101 +217,6 @@ class MCTS_Task(SearchTask):
         print(f'Failed to get the review!:{p}\n')
         return p
 
-    def verify_end_nodes(self, root):
-        if self.reward_model_type == 'vm':
-            end_leaf_nodes = root.get_all_end_root_nodes_vm(self.end_gate)
-        else:
-            end_leaf_nodes = root.get_all_end_root_nodes_prm()
-        flag = False
-        for leaf in end_leaf_nodes:
-            leaf.on_final_route = True
-            cnt = 5
-            summ = ''
-            while cnt:
-                if self.verify_method == 'string':
-                    summ = self.get_MATH_summary(leaf.y)
-                else:
-                    summ = self.get_summary(leaf.y)
-                if summ:
-                    leaf.summary = summ
-                    break
-                else:
-                    cnt -= 1
-            if not summ:
-                summ = extract_summary_from_solution(leaf.y)
-                leaf.summary = summ
-
-            if self.verify_method == 'string':
-                result = exact_match_score(summ, self.answer)
-            else:
-                result = llm_verify(summ, self.answer)
-            if result:
-                if self.reward_model_type == 'vm':
-                    leaf.min_steps_to_correct = 1
-                else:
-                    leaf.he = 1
-                flag = True
-        return flag, end_leaf_nodes
-
-
-        if self.reward_model_type == 'vm':
-            end_leaf_nodes = root.get_all_end_root_nodes_vm(self.end_gate)
-        else:
-            end_leaf_nodes = root.get_all_end_root_nodes_prm()
-
-        if not end_leaf_nodes or not weighted:
-            if not end_leaf_nodes:
-                best_node, best_V = root.getBestV()
-            else:
-                sorted_nodes = sorted(end_leaf_nodes, key=lambda x: x.V, reverse=True)
-                best_node = sorted_nodes[0]
-            solution = best_node.y
-            cnt = 5
-            summ = ''
-            while cnt:
-                if self.verify_method == 'string':
-                    summ = self.get_MATH_summary(solution)
-                else:
-                    summ = self.get_summary(solution)
-                if summ:
-                    best_node.summary = summ
-                    break
-                else:
-                    cnt -= 1
-            if not summ:
-                summ = extract_summary_from_solution(solution)
-                best_node.summary = summ
-            return solution, summ
-
-        else:
-            all_answers = {}  # {answer: [solution, summ, value]}
-            for leaf in end_leaf_nodes:
-                cnt = 5
-                summ = ''
-                while cnt:
-                    if self.verify_method == 'string':
-                        summ = self.get_MATH_summary(leaf.y)
-                    else:
-                        summ = self.get_summary(leaf.y)
-                    if summ:
-                        leaf.summary = summ
-                        break
-                    else:
-                        cnt -= 1
-                if not summ:
-                    summ = extract_summary_from_solution(leaf.y)
-                    leaf.summary = summ
-
-                extracted_answer = extract_answer(summ)
-                if extracted_answer in all_answers.keys():
-                    all_answers[extracted_answer][2] += leaf.V
-                else:
-                    all_answers[extracted_answer] = [leaf.y, summ, leaf.V]
-
-            best_answer = max(all_answers.values(), key=lambda x: x[2])
-            solution = best_answer[0]
-            summ = best_answer[1]
-            return solution, summ
 
     def get_step_value(self, y, action):
         print(' get step value 함수 시작\n')
