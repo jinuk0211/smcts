@@ -131,18 +131,29 @@ def get_next_steps_expand(node: treeNode, mcts_task):
         next_steps.append(proposal)
     return next_steps
 
-def get_next_steps_roll(y: str, step_n: int, mcts_task):
-     next_steps = []
-     for i in range(mcts_task.particle_n): #디폴트 roll_branch=1
-         proposal = ''
-         cnt = 3
-         while not proposal and cnt:
+def get_next_steps_roll(y: str, step_n: int, mcts_task, only1=True):
+    next_steps = []
+    if only1 =True:
+        for i in range(1):
+            proposal = ''
+            cnt = 3
+            while not proposal and cnt:
             proposal = mcts_task.get_next_step(y, step_n) #다음단계 생성하는 함수
             cnt -= 1
-         if not proposal:
-             continue
-         next_steps.append(proposal)
-     return next_steps
+            if not proposal:
+                continue
+        return proposal   
+    else:
+        for i in range(mcts_task.particle_n): #디폴트 roll_branch=1
+            proposal = ''
+            cnt = 3
+            while not proposal and cnt:
+            proposal = mcts_task.get_next_step(y, step_n) #다음단계 생성하는 함수
+            cnt -= 1
+            if not proposal:
+                continue
+            next_steps.append(proposal)
+    return next_steps
 
 def greedyPolicy(node: treeNode, mcts_task):
     max_V = mcts_task.low
@@ -157,37 +168,68 @@ def greedyPolicy(node: treeNode, mcts_task):
         print('This step has been resolved and does not require simulation.\n')
         return node.V
     for i in range(mcts_task.roll_forward_steps): # 디폴트 - 3
-        actions = get_next_steps_roll(strs, cur_step, mcts_task)  # str_list
-        if not actions:
-            break
-        new_ys = [strs + action for action in actions]
-        cur_step += 1
-        values = [mcts_task.get_step_value(new_y, action) for new_y in new_ys for action in actions]
-        idx = numpy.argmax(values)
-        strs = new_ys[idx]
-        value = values[idx]
-        if value > max_V:
-            max_V = value
-        cur_ref = mcts_task.get_simple_reflection(strs, cur_step) #answer check
-        if cur_ref == '<end>':
-            break
-        rewards = [particle.get_last_reward() for particle in node.children]
-        logits = [inverse_sigmoid(r) for r in rewards]
-        logits = np.array(logits)
-        
-        if temperature_annealing:
-            softmax_temp = temperature_linear_annealing(
-                starting_temp=temperature_annealing[0],
-                ending_temp=temperature_annealing[1],
-                total_steps=temperature_annealing[2],
-                current_step=step,)
 
-        weights = softmax(logits / softmax_temp)  
-        for i,particle in enumerate(node.children):
-            particle.update_value(weights[i])
-        sampled_children = np.random.choice(node.children, size=len(node.children), replace=True, p=weights)
-        node.children = list(sampled_children)
-        #particle filtering            
+        if i >= 1: 
+            for particle in sampled_children:
+                actions = []
+                values = []
+                action = get_next_steps_roll(particle.trajectory, cur_step, mcts_task,only1=True)
+                if not action:
+                    break
+                new_y = particle.trajectory + action
+                value = mcts_task.get_step_value(new_y, action)
+                actions.append(action)
+                values.append(value)                
+                if value > max_V:
+                    max_V = value
+                cur_ref = mcts_task.get_simple_reflection(strs, cur_step) #answer check
+                if cur_ref == '<end>':
+                    break
+            rewards = [particle.get_last_reward() for particle in sampled_children]
+            logits = [inverse_sigmoid(r) for r in rewards]
+            logits = np.array(logits)
+            
+            if temperature_annealing:
+                softmax_temp = temperature_linear_annealing(starting_temp=temperature_annealing[0],ending_temp=temperature_annealing[1],
+                    total_steps=temperature_annealing[2],current_step=step)
+
+            weights = softmax(logits / softmax_temp)  
+            for i, particle in enumerate(sampled_children):
+                particle.update_value(weights[i])
+                particle.trajectory.append(new_y for new_y in new_ys)
+            sampled_children = np.random.choice(sampled_children, size=len(sampled_children), replace=True, p=weights)            
+
+        else:
+            actions = get_next_steps_roll(strs, cur_step, mcts_task)  # str_list
+            if not actions:
+                break
+            new_ys = [strs + action for action in actions]
+            cur_step += 1
+            values = [mcts_task.get_step_value(new_y, action) for new_y in new_ys for action in actions]
+            # idx = numpy.argmax(values)
+            # strs = new_ys[idx]
+            # value = values[idx]
+            if value > max_V:
+                max_V = value
+            cur_ref = mcts_task.get_simple_reflection(strs, cur_step) #answer check
+            if cur_ref == '<end>':
+                break
+            rewards = [particle.get_last_reward() for particle in node.children]
+            logits = [inverse_sigmoid(r) for r in rewards]
+            logits = np.array(logits)
+            
+            if temperature_annealing:
+                softmax_temp = temperature_linear_annealing(starting_temp=temperature_annealing[0],ending_temp=temperature_annealing[1],
+                    total_steps=temperature_annealing[2],current_step=step,)
+
+            weights = softmax(logits / softmax_temp)  
+            for i,particle in enumerate(node.children):
+                particle.update_value(weights[i])
+                particle.trajectory.append(new_y for new_y in new_ys)
+            sampled_children = np.random.choice(node.children, size=len(node.children), replace=True, p=weights)
+            
+            #node.children = list(sampled_children)
+            #particle filtering            
     return max_V
 
 

@@ -153,28 +153,3 @@ class treeNode(object):
         value_samples = self.get_all_value_samples_vm()
         return value_samples
 
-
-    def get_full_value_samples_prm(self, end_leaf_nodes):
-        for leaf in end_leaf_nodes:
-            cur_node = leaf.parent
-            while cur_node is not None:
-                cur_node.on_final_route = True
-                cur_node = cur_node.parent
-        for leaf in end_leaf_nodes:
-            cur_node = leaf.parent
-            while cur_node is not None:
-                cur_node.he = max([n.he for n in cur_node.children.values() if n.on_final_route])
-                cur_node = cur_node.parent
-        # value_samples = self.get_all_value_samples_prm()
-        # return value_samples
-        full_value_samples = []
-        if self.on_final_route:
-            full_value_samples.append({'steps': self.y, 'value': self.he})
-            if self.isFullyExpanded:
-                for child in self.children.values():
-                    if child.on_final_route:
-                        sub_samples = child.get_all_value_samples_prm()
-                        full_value_samples.extend(sub_samples)
-            return full_value_samples
-        else:
-            return []
