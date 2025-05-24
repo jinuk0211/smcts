@@ -50,6 +50,37 @@ import numpy as np
 temperature_annealing=()
 
 
+# def expand(node: treeNode, mcts_task):
+#     if not node.reflection:
+#         if mcts_task.use_reflection == 'common':
+#             reflection = mcts_task.get_reflection(node.y, node.depth + 1)
+#         else:  # simple
+#             reflection = mcts_task.get_simple_reflection(node.y, node.depth + 1)
+#         node.update_reflection(reflection)
+#     if node.reflection == '<end>':
+#         return node
+#     actions = get_next_steps_expand(node, mcts_task)
+#     if not actions:
+#         node.update_reflection('<end>')
+#         return node
+
+#     for action in actions:
+#         if action not in node.children.keys():
+#             node.append_children(action)
+#             child = node.children[action]
+#             value = mcts_task.get_step_value(child.y)
+#             child.update_value(value)
+#             if mcts_task.sample_value == 'full':
+#                 if mcts_task.use_reflection == 'common':
+#                     child.update_reflection(mcts_task.get_reflection(child.y, child.depth + 1))
+#                 else:
+#                     child.update_reflection(mcts_task.get_simple_reflection(child.y, child.depth + 1))
+#             child.visit_sequence = mcts_task.node_count
+#             mcts_task.update_count()
+#     node.isFullyExpanded = True
+#     return node
+
+
 def expand(node: treeNode, mcts_task):
 
     if not node.reflection:# simple
