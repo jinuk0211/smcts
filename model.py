@@ -1,7 +1,6 @@
 from PIL import Image
 import torch
-from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor, Qwen2_5_VLForConditionalGeneration
-from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoProcessor, AutoModelForCausalLM
 #  MllamaForConditionalGeneration
 
 
@@ -64,14 +63,14 @@ def llm_proposal(model=None,tokenizer=None,prompt=None,model_name='qwen'):
             temperature=0.0,
         )
 
-        # 🎯 출력 결과
+        
         reply = response['choices'][0]['message']['content'].strip()
         return reply 
 
 
 
 
-def get_proposal(model, processor, prompt, model_name ='qwen'):
+def get_proposal(model, tokenizer, prompt, model_name ='qwen'):
     #temperature=0.7, max_tokens=2048, seed=170, max_length=2048, truncation=True,do_sample=True, max_new_tokens=1024
     if model_name =='qwen':
         messages = [ {"role": "system", "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."},
@@ -105,3 +104,4 @@ def get_proposal(model, processor, prompt, model_name ='qwen'):
         )
 
         output = model.generate(prompt, sampling_params, use_tqdm=False)      
+        return output

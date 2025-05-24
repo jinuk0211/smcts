@@ -16,15 +16,13 @@ from qwen_vl_utils import process_vision_info
 from easydict import EasyDict
 from vllm import LLM
 # from model import llm
+import torch
 
 prm = load_prm(config)
 model, tokenizer = LLM('qwen')
 #model = LLM(model="meta-llama/Llama-3.2-1B-Instruct",dtype="float16")
 def run(args):
-    os.environ["OPENAI_API_KEY"] = 
-    os.environ["OPENAI_API_BASE"] = "https://api.openai.com/v1/chat/completions" # Replace with your actual base
-    api_key = os.getenv("OPENAI_API_KEY")
-    api_base = os.getenv("OPENAI_API_BASE")    
+   
     print('-'*30, 'Begin testing', '-'*30, '\n')
     try:
         if args.dataset == 'math':
@@ -57,19 +55,15 @@ def run(args):
                             args.temperature, use_case_prompt=args.use_case_prompt, use_reflection=args.use_reflection,
                             low=args.low, high=args.high, evaluate=args.evaluate)
         output, root = Task.run()
-
+        output_list.append(output['solution'])
     if args.evaluate:
-        pd.DataFrame()
-        output            
-        dataset.data = dataset.data.drop(columns=['image'])  
-        output_path = '/workspace/last/dataset.xlsx'
-        dataset.data.to_excel(output_path, index=False)
-
+        pd.DataFrame(output_list, columns=['solution'])
+        #output            
+        #dataset.data = dataset.data.drop(columns=['image'])  
+        #output_path = '/workspace/last/dataset.xlsx'
+        #dataset.data.to_excel(output_path, index=False)
+    return output
     
-
-import torch
-from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor, Qwen2_5_VLForConditionalGeneration
-from transformers import AutoModelForCausalLM, MllamaForConditionalGeneration
 #  MllamaForConditionalGeneration
 
 def get_args():
@@ -110,7 +104,7 @@ def get_args():
         'llava_next_8b_model_path': None,
         'openai_api_key': None,
         'openai_base_url': 'https://api.openai.com/v1',
-        'dataset' :  'MathVista_MINI',
+        'dataset' :  'aime',
     
 
     })

@@ -45,31 +45,13 @@ def selectNode(node, mcts_task):
         return False, node
 
 
-def expand(node: treeNode, mcts_task):
-    if not node.reflection:
-        reflection = mcts_task.get_simple_reflection(node.y, node.depth + 1)
-        node.update_reflection(reflection)
-    if node.reflection == '<end>':
-        return node
-    actions = get_next_steps_expand(node, mcts_task)
-    if not actions:
-        node.update_reflection('<end>')
-        return node
 
-    for action in actions:
-        if action not in node.children.keys():
-            node.append_children(action)
-            child = node.children[action]
-            value = mcts_task.get_step_value(child.y)
-            child.update_value(value)
-            if mcts_task.sample_value == 'full':
-                child.update_reflection(mcts_task.get_simple_reflection(child.y, child.depth + 1))
-            child.visit_sequence = mcts_task.node_count
-            mcts_task.update_count()
-    node.isFullyExpanded = True
-    return node
+import numpy as np
+temperature_annealing=()
+
 
 def expand(node: treeNode, mcts_task):
+
     if not node.reflection:# simple
         reflection = mcts_task.get_simple_reflection(node.y, node.depth + 1)
         node.update_reflection(reflection)
@@ -87,11 +69,11 @@ def expand(node: treeNode, mcts_task):
             value = mcts_task.get_step_value(child.y,action) #particle, process reward model로 계산
             child.update_value(value) # 진짜 value for mcts search
             if mcts_task.sample_value == 'full':
-                child.update_reflection(mcts_task.get_simple_reflection(child.y, child.depth + 1))]
+                child.update_reflection(mcts_task.get_simple_reflection(child.y, child.depth + 1))
             child.visit_sequence = mcts_task.node_count
             mcts_task.update_count()
     #particle filtering
-    rewards = [particle.get_last_reward() for particle in node.children]
+    rewards = [particle.get_last_reward() for particle in node.children.values()]
     logits = [inverse_sigmoid(r) for r in rewards]
     logits = np.array(logits)
     
@@ -101,12 +83,16 @@ def expand(node: treeNode, mcts_task):
             ending_temp=temperature_annealing[1],
             total_steps=temperature_annealing[2],
             current_step=step,)
+    else:  
+        softmax_temp=1.0
 
     weights = softmax(logits / softmax_temp)  
-    for i,particle in enumerate(node.children):
+    for i,particle in enumerate(node.children.values()):
         particle.update_value(weights[i])
-    sampled_particle = np.random.choice(node.children, size=len(node.children), replace=True, p=weights)
+    
+    sampled_particle = np.random.choice(list(node.children.values()), size=len(node.children), replace=True, p=weights)
     # node.children을 샘플링된 결과로 바꾸기
+    print(sampled_particle)
     node.children = list(sampled_particle)
     # sampled_particles = np.random.choice(particles + [reference_particle],size=len(particles),p=weights,replace=True,)
     #particle filtering
@@ -130,23 +116,22 @@ def get_next_steps_expand(node: treeNode, mcts_task):
 
 def get_next_steps_roll(y: str, step_n: int, mcts_task, only1=True):
     next_steps = []
-    if only1 =True:
+    if only1 == True:
         for i in range(1):
             proposal = ''
             cnt = 3
             while not proposal and cnt:
-            proposal = mcts_task.get_next_step(y, step_n) #다음단계 생성하는 함수
-            cnt -= 1
-            if not proposal:
-                continue
+              proposal = mcts_task.get_next_step(y, step_n)
+              cnt -= 1
+            
         return proposal   
     else:
         for i in range(mcts_task.particle_n): #디폴트 roll_branch=1
             proposal = ''
             cnt = 3
             while not proposal and cnt:
-            proposal = mcts_task.get_next_step(y, step_n) #다음단계 생성하는 함수
-            cnt -= 1
+              proposal = mcts_task.get_next_step(y, step_n) #다음단계 생성하는 함수
+              cnt -= 1
             if not proposal:
                 continue
             next_steps.append(proposal)
@@ -189,7 +174,8 @@ def greedyPolicy(node: treeNode, mcts_task):
             if temperature_annealing:
                 softmax_temp = temperature_linear_annealing(starting_temp=temperature_annealing[0],ending_temp=temperature_annealing[1],
                     total_steps=temperature_annealing[2],current_step=step)
-
+            else:
+                softmax_temp = 1.0 
             weights = softmax(logits / softmax_temp)  
             for i, particle in enumerate(sampled_particle):
                 particle.update_value(weights[i])
@@ -220,7 +206,8 @@ def greedyPolicy(node: treeNode, mcts_task):
             if temperature_annealing:
                 softmax_temp = temperature_linear_annealing(starting_temp=temperature_annealing[0],ending_temp=temperature_annealing[1],
                     total_steps=temperature_annealing[2],current_step=step,)
-            
+            else:
+              softmax_temp =1.0
             weights = softmax(logits / softmax_temp)  
             for i, particle in enumerate(sampled_particle):
                 particle.update_value(weights[i])
